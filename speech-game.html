@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kalbos Žaidimas</title>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive;
+      background: #1e1e2f;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    h1 {
+      color: #fff;
+      font-size: 2.5em;
+      margin: 40px auto 20px;
+      padding: 15px 40px;
+      border-radius: 15px;
+      width: fit-content;
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+    #sentence {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin: 40px auto;
+      max-width: 90vw;
+    }
+    .block {
+      background: linear-gradient(145deg, #7f5af0, #2cb2ff);
+      border-radius: 20px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      padding: 15px;
+      width: 160px;
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 80px;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .block:hover {
+      transform: scale(1.1);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+    }
+    #nextBtn {
+      padding: 20px 30px;
+      font-size: 36px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      display: inline-block;
+      background-color: #7f5af0;
+      color: white;
+    }
+    #nextBtn:hover {
+      background-color: #6c4bd8;
+      transform: scale(1.1);
+    }
+    #reward {
+      margin-top: 20px;
+      font-size: 26px;
+      font-weight: bold;
+      color: #e67e22;
+      display: none;
+    }
+    #stats {
+      color: white;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+  </style>
+  <audio id="success-sound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
+</head>
+<body>
+  <h1>Pasakyk sakinį teisingai!</h1>
+  <div id="sentence"></div>
+  <div id="reward"></div>
+  <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin: 30px auto; width: fit-content;">
+    <button id="stopConfettiBtn" title="Stabdyti konfeti">🛑</button>
+    <button id="nextBtn" title="Kitas sakinys">➡️</button>
+  </div>
+  <div id="stats">✅ 0 teisingai | ⭐ 0 XP | 🔥 0 streak</div>
+  <canvas id="confetti-canvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+
+  <script>
+    const sentences = [
+      { singular: ["🧒", "🍽️", "🍦"], plural: ["🧒🧒", "🍽️", "🍦"], singularText: "berniukas valgo ledus", pluralText: "berniukai valgo ledus" },
+      { singular: ["🐶", "🚶‍♂️", "🧹"], plural: ["🐶🐶", "🚶‍♂️", "🧹"], singularText: "šuo neša šluotą", pluralText: "šunys neša šluotas" },
+      { singular: ["🐰", "🍽️", "🥗"], plural: ["🐰🐰", "🍽️", "🥗"], singularText: "zuikis valgo salotą", pluralText: "zuikiai valgo salotas" },
+      { singular: ["🪆", "😴", "🛏️"], plural: ["🪆🪆", "😴", "🛏️🛏️"], singularText: "lėlė miega lovoje", pluralText: "lėlės miega lovose" },
+      { singular: ["👷", "🛠️", "🪑"], plural: ["👷👷", "🛠️", "🪑"], singularText: "stalius taiso kėdę", pluralText: "staliai taiso kėdes" }
+    ];
+
+    let currentSentence = 0;
+    let isPlural = false;
+    let xp = 0;
+    let correctCount = 0;
+    let streak = 0;
+    let confettiAnimationId = null;
+
+    const sentenceDiv = document.getElementById("sentence");
+    const reward = document.getElementById("reward");
+    const nextBtn = document.getElementById("nextBtn");
+    const stats = document.getElementById("stats");
+
+    function updateStats() {
+      stats.textContent = `✅ ${correctCount} teisingai | ⭐ ${xp} XP | 🔥 ${streak} streak`;
+    }
+
+    function renderSentence() {
+      sentenceDiv.innerHTML = "";
+      const blocks = isPlural ? sentences[currentSentence].plural : sentences[currentSentence].singular;
+      blocks.forEach((emoji, index) => {
+        const block = document.createElement("div");
+        block.className = "block";
+        block.innerHTML = index === 0 && isPlural ? '<span style="display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 60px;">' + [...emoji].map(e => `<span>${e}</span>`).join('') + '</span>' : emoji;
+        if (index === 0) {
+          block.onclick = () => {
+            isPlural = !isPlural;
+            renderSentence();
+            reward.textContent = `🗣️ Pasakyk: "${isPlural ? sentences[currentSentence].pluralText : sentences[currentSentence].singularText}"`;
+            reward.style.display = 'block';
+          };
+        }
+        sentenceDiv.appendChild(block);
+      });
+    }
+
+    nextBtn.onclick = () => {
+      if (confettiAnimationId) cancelAnimationFrame(confettiAnimationId);
+      const canvas = document.getElementById('confetti-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      confettiAnimationId = null;
+      currentSentence = (currentSentence + 1) % sentences.length;
+      isPlural = false;
+      reward.style.display = 'none';
+      renderSentence();
+    };
+
+    function launchConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      const ctx = canvas.getContext('2d');
+      const pieces = [];
+      const colors = ['#f94144', '#f3722c', '#f8961e', '#43aa8b', '#577590', '#9b5de5'];
+
+      for (let i = 0; i < 150; i++) {
+        pieces.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height - canvas.height,
+          size: Math.random() * 6 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          weight: Math.random() * 1 + 0.5,
+          rotation: Math.random() * 360
+        });
+      }
+
+      function update() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let p of pieces) {
+          p.y += p.weight;
+          p.rotation += 1;
+          if (p.y > canvas.height) p.y = -p.size;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rotation * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
+        }
+        confettiAnimationId = requestAnimationFrame(update);
+      }
+
+      update();
+    }
+
+    renderSentence();
+    updateStats();
+
+    document.getElementById('stopConfettiBtn').onclick = () => {
+      if (confettiAnimationId) {
+        cancelAnimationFrame(confettiAnimationId);
+        const canvas = document.getElementById('confetti-canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        confettiAnimationId = null;
+      }
+    };
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'c') {
+        reward.textContent = '🎉 Teisingai! (test mode) 🎉';
+        reward.style.display = 'block';
+        document.getElementById('success-sound').play();
+        launchConfetti();
+        xp += 10;
+        correctCount++;
+        streak++;
+        updateStats();
+      }
+    });
+  </script>
+</body>
+</html>
