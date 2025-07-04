@@ -151,6 +151,12 @@
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      });
       const pieces = [];
       const colors = ['#f94144', '#f3722c', '#f8961e', '#43aa8b', '#577590', '#9b5de5'];
 
